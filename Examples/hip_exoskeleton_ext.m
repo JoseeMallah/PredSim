@@ -1,0 +1,86 @@
+% --------------------------------------------------------------------------
+% hip_exoskeleton_ext
+%   Simulate walking with a hip exoskeleton that provides an
+%   extension torque in function of the progression within a stride.
+%   Running this simulation requires the function desired_torque_generator_hip_extension,
+%
+%   References
+%   [1] P. W. Franks et al., “Comparing optimized exoskeleton assistance of the hip, knee,
+%   and ankle in single and multi-joint configurations,” Wearable Technologies,
+%   vol. 2, Oct. 2021, doi: 10.1017/wtc.2021.14.
+% 
+%   See also desired_torque_generator_hip_extension
+%
+% Original author: Josée Mallah
+% Original date: 16/March/2026
+% --------------------------------------------------------------------------
+
+clear
+close all
+clc
+addpath('\\ifs.eng.cam.ac.uk\users\jm2508\casadi-3.6.7-windows64-matlab2018b')
+
+[pathExDir,~,~] = fileparts(mfilename('fullpath'));
+[pathRepo,~,~] = fileparts(pathExDir);
+[pathRepoFolder,~,~] = fileparts(pathRepo);
+
+addpath(fullfile(pathRepo,'DefaultSettings'))
+addpath(pathRepo)
+
+%% Initialize S
+
+[S] = initializeSettings('DHondt_et_al_2024_3seg');
+
+%% Settings
+
+% name of the subject
+%S.subject.name = 'DHondt_et_al_2024_3seg';
+S.subject.name = 'SUBJ25';
+bm = 80;
+
+% Walking speed
+%S.misc.forward_velocity = 1.09; % SUBJ01
+%S.misc.forward_velocity = 1.19; % SUBJ08
+%S.misc.forward_velocity = 1.015; % SUBJ19
+S.misc.forward_velocity = 1.17; % SUBJ25
+
+% path to folder where you want to store the results of the OCP
+S.misc.save_folder  = fullfile(pathExDir,'ExampleResults','HipExo', 'SUBJ25', 'Ext');  
+
+% either choose "quasi-random" or give the path to a .mot file you want to use as initial guess
+%S.solver.IG_selection = fullfile(S.misc.main_path,'OCP','IK_Guess_Full_GC.mot');
+S.solver.IG_selection = fullfile(S.misc.main_path,'Subjects',S.subject.name,'SUBJ25_ik_deg_GC.mot');
+S.solver.IG_selection_gaitCyclePercent = 100;
+
+% give the path to the osim model of your subject
+osim_path = fullfile(pathRepo,'Subjects',S.subject.name,[S.subject.name '.osim']);
+
+
+%% Add hip exoskeleton
+
+% select orthosis function
+exo1.function_name = 'hipExoExt';
+
+% set path to downloaded function - CHANGE THIS
+exo1.dependencies_path = 'C:\Users\jm2508\Documents\PredSim';
+
+% set parameters of assistance profile
+exo1.peak_torque = 0.404 * bm; % [Nm] mean
+exo1.peak_time = 26.2; % [%] mean
+exo1.rise_time = 16.4; % [%] mean
+exo1.fall_time = 31.8;  % [%] mean
+
+exo1.plotAssistanceProfile = true;
+
+% add orthosis on right side
+exo1.left_right = 'r';
+S.orthosis.settings{1} = exo1;
+
+% add the same orthosis on left side
+exo1.left_right = 'l';
+S.orthosis.settings{2} = exo1;
+
+%% Run predictive simulations
+
+[savename] = runPredSim(S, osim_path);
+
