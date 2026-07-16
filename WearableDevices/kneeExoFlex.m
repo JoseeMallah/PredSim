@@ -1,15 +1,14 @@
-function [exo] = ankleExoZhang2017(init, settings_orthosis)
+function [exo] = kneeExoFlex(init, settings_orthosis)
 % --------------------------------------------------------------------------
-% ankleExoZhang2017
-%   Ankle exoskeleton that applies a torque profile (torque in function of
-%   stride) to the ankle. 
-%
-%   This function requires additional dependencies, which can be downloaded
-%   from: 
-%   https://www.science.org/doi/10.1126/science.aal5054#supplementary-materials
+% kneeExoFlex
+%   Knee exoskeleton that applies a torque profile (torque in function of
+%   stride) to the knee. 
 %
 %   References
-%   [1] J. Zhang et al., “Human-in-the-loop optimization of exoskeleton 
+%   [1] P. W. Franks et al., “Comparing optimized exoskeleton assistance of the hip, knee,
+%   and ankle in single and multi-joint configurations,” Wearable Technologies,
+%   vol. 2, Oct. 2021, doi: 10.1017/wtc.2021.14.
+%   [2] J. Zhang et al., “Human-in-the-loop optimization of exoskeleton 
 %   assistance during walking,” Science, vol. 356, pp. 1280–1283, Jun. 2017, 
 %   doi: 10.1126/science.aal5054.
 %
@@ -19,7 +18,7 @@ function [exo] = ankleExoZhang2017(init, settings_orthosis)
 % 
 %   - settings_orthosis -
 %   * struct with information about this orthosis, containing the fields:
-%       - function_name = ankleExoZhang2017  i.e. name of this function   
+%       - function_name = kneeExoFlex  i.e. name of this function   
 %       - dependencies_path path to dependencies
 %       - isFullGaitCycle   assistance profile for full stride when true,
 %       half stride when false. Default is false.
@@ -35,8 +34,8 @@ function [exo] = ankleExoZhang2017(init, settings_orthosis)
 %   - exo -
 %   * an object of the class Orthosis
 % 
-% Original author: Lars D'Hondt
-% Original date: 8/January/2024
+% Original author: Josée Mallah
+% Original date: 16/March/2026
 % --------------------------------------------------------------------------
 
 % create Orthosis object
@@ -76,20 +75,20 @@ end
 % load function to calculate desired torque
 tmp = pwd;
 cd(settings_orthosis.dependencies_path);
-fun = str2func('desired_torque_generator');
+fun = str2func('desired_torque_generator_modif');
 cd(tmp);
 
 
 % call function to calculate torque
-T_ankle = zeros(3,N_control);
+T_knee = zeros(3,N_control);
 for i=1:N_control
-    T_ankle(3,i) = fun(mesh_control(i)/N_stride, 1, exo_params);
+    T_knee(3,i) = fun(mesh_control(i)/N_stride, 1, exo_params);
 end
 
 
-% apply exo torque on tibia and calcn
-exo.addBodyMoment(T_ankle, ['T_exo_shank_',side],['tibia_',side]);
-exo.addBodyMoment(-T_ankle, ['T_exo_foot_',side],['calcn_',side],['tibia_',side]);
+% apply exo torque on femur and tibia
+exo.addBodyMoment(T_knee, ['T_exo_thigh_',side],['femur_',side]);
+exo.addBodyMoment(-T_knee, ['T_exo_shank_',side],['tibia_',side],['femur_',side]);
 
 
 % plot figure if wanted
@@ -111,10 +110,10 @@ if isfield(settings_orthosis,'plotAssistanceProfile')
             legName = 'right';
         end
         hold on
-        plot((1:N_control)/N_stride*100,T_ankle(3,:),'DisplayName',legName)
+        plot((1:N_control)/N_stride*100,T_knee(3,:),'DisplayName',legName)
         xlabel('Stride [%]')
         ylabel('Assistance [Nm]')
-        title('ankleExoZhang2017')
+        title('kneeExoFlex')
         legend('Location','best')
 
     end

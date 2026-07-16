@@ -1,17 +1,14 @@
-function [exo] = ankleExoZhang2017(init, settings_orthosis)
+function [exo] = ankleExoDF(init, settings_orthosis)
 % --------------------------------------------------------------------------
-% ankleExoZhang2017
+% ankleExoDF
 %   Ankle exoskeleton that applies a torque profile (torque in function of
 %   stride) to the ankle. 
 %
-%   This function requires additional dependencies, which can be downloaded
-%   from: 
-%   https://www.science.org/doi/10.1126/science.aal5054#supplementary-materials
-%
 %   References
-%   [1] J. Zhang et al., “Human-in-the-loop optimization of exoskeleton 
-%   assistance during walking,” Science, vol. 356, pp. 1280–1283, Jun. 2017, 
-%   doi: 10.1126/science.aal5054.
+%   [1] J. Miguel-Fernandez et al., “Relationship Between Ankle Assistive
+%   Torque and Biomechanical Gait Metrics in Individuals After Stroke,”
+%   IEEE Robotics and Automation Letters, vol. 7, pp. 7574-7580, Jul. 2022, 
+%   doi: 10.1109/LRA.2022.3183799.
 %
 % INPUT:
 %   - init -
@@ -19,14 +16,15 @@ function [exo] = ankleExoZhang2017(init, settings_orthosis)
 % 
 %   - settings_orthosis -
 %   * struct with information about this orthosis, containing the fields:
-%       - function_name = ankleExoZhang2017  i.e. name of this function   
+%       - function_name = ankleExoDF  i.e. name of this function   
 %       - dependencies_path path to dependencies
 %       - isFullGaitCycle   assistance profile for full stride when true,
 %       half stride when false. Default is false.
 %       - peak_torque:      peak torque in Nm
-%       - peak_time:        timing of peak as % of stride
-%       - rise_time:        rise time as % of stride
-%       - fall_time:        fall time as % of stride
+%       - t1:               onset time as % of stride
+%       - t2:               peak rise time as % of stride
+%       - t3:               peak fall time as % of stride
+%       - t4:               offset time as % of stride
 %   Values are set via S.orthosis.settings{i} in main.m, with i the index
 %   of the orthosis.
 %
@@ -35,8 +33,8 @@ function [exo] = ankleExoZhang2017(init, settings_orthosis)
 %   - exo -
 %   * an object of the class Orthosis
 % 
-% Original author: Lars D'Hondt
-% Original date: 8/January/2024
+% Original author: Josée Mallah
+% Original date: 01/March/2025
 % --------------------------------------------------------------------------
 
 % create Orthosis object
@@ -50,9 +48,10 @@ else
     isFullGaitCycle = false;
 end
 exo_params(1) = settings_orthosis.peak_torque;
-exo_params(2) = settings_orthosis.peak_time;
-exo_params(3) = settings_orthosis.rise_time;
-exo_params(4) = settings_orthosis.fall_time;
+exo_params(2) = settings_orthosis.t1;
+exo_params(3) = settings_orthosis.t2;
+exo_params(4) = settings_orthosis.t3;
+exo_params(5) = settings_orthosis.t4;
 side = settings_orthosis.left_right; % 'l' for left or 'r' for right
 
 % number of control intervals for simulation
@@ -76,7 +75,7 @@ end
 % load function to calculate desired torque
 tmp = pwd;
 cd(settings_orthosis.dependencies_path);
-fun = str2func('desired_torque_generator');
+fun = str2func('desired_df_torque');
 cd(tmp);
 
 
@@ -114,7 +113,7 @@ if isfield(settings_orthosis,'plotAssistanceProfile')
         plot((1:N_control)/N_stride*100,T_ankle(3,:),'DisplayName',legName)
         xlabel('Stride [%]')
         ylabel('Assistance [Nm]')
-        title('ankleExoZhang2017')
+        title('ankleExoDf')
         legend('Location','best')
 
     end
